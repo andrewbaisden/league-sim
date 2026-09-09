@@ -19,7 +19,7 @@
     "db:migrate": "pnpm --filter @leaguesim/db migrate",
     "db:seed": "pnpm --filter @leaguesim/db seed",
     "db:setup": "pnpm db:generate && pnpm db:migrate && pnpm db:seed",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
