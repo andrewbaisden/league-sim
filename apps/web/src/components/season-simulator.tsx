@@ -9,9 +9,9 @@ import type {
 } from "@leaguesim/domain";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { useSimulationStore } from "@/stores/simulation-store";
+import { type SeasonHistoryEntry, useSimulationStore } from "@/stores/simulation-store";
 import { LeagueTable } from "./league-table";
 
 interface SeasonResponse {
@@ -29,12 +29,7 @@ interface InitialBatchView {
   fixtures: Fixture[];
 }
 
-type HistoryEntry = SeasonSimulationResult & {
-  batchId?: string;
-  persisted?: boolean;
-};
-
-function toHistoryEntry(batchView: InitialBatchView): HistoryEntry {
+function toHistoryEntry(batchView: InitialBatchView): SeasonHistoryEntry {
   return {
     seed: batchView.seed,
     modelVersion: "poisson-v1",
@@ -89,15 +84,17 @@ export function SeasonSimulator({
   const adjustments = useSimulationStore((state) => state.adjustments);
   const activeScenarioId = useSimulationStore((state) => state.activeScenarioId);
   const activeBatchId = useSimulationStore((state) => state.activeBatchId);
+  const history = useSimulationStore((state) => state.seasonHistory);
   const nextSeed = useSimulationStore((state) => state.nextSeed);
   const resetScenario = useSimulationStore((state) => state.reset);
   const setActiveBatchId = useSimulationStore((state) => state.setActiveBatchId);
   const setBaseSnapshotId = useSimulationStore((state) => state.setBaseSnapshotId);
   const setLastSeasonResult = useSimulationStore((state) => state.setLastSeasonResult);
+  const setSeasonHistory = useSimulationStore((state) => state.setSeasonHistory);
+  const pushSeasonHistory = useSimulationStore((state) => state.pushSeasonHistory);
+  const popSeasonHistory = useSimulationStore((state) => state.popSeasonHistory);
   const storeBaseSnapshotId = useSimulationStore((state) => state.baseSnapshotId);
-  const [history, setHistory] = useState<HistoryEntry[]>(() =>
-    initialBatchView ? [toHistoryEntry(initialBatchView)] : [],
-  );
+  const hydratedBatchIdRef = useRef<string | null>(null);
   const [scenarioName, setScenarioName] = useState("My what-if season");
   const [saveMessage, setSaveMessage] = useState("");
   const current = history.at(-1);
@@ -127,18 +124,27 @@ export function SeasonSimulator({
   const tableRows = current?.standings ?? standings;
 
   useEffect(() => {
-    if (initialBatchView) {
-      const entry = toHistoryEntry(initialBatchView);
-      setHistory([entry]);
-      setActiveBatchId(initialBatchView.batchId);
-      setLastSeasonResult(entry);
-      if (baseSnapshotId) setBaseSnapshotId(baseSnapshotId);
+    if (baseSnapshotId) setBaseSnapshotId(baseSnapshotId);
+  }, [baseSnapshotId, setBaseSnapshotId]);
+
+  useEffect(() => {
+    if (!initialBatchView) return;
+    if (hydratedBatchIdRef.current === initialBatchView.batchId) return;
+    if (current?.batchId === initialBatchView.batchId) {
+      hydratedBatchIdRef.current = initialBatchView.batchId;
       return;
     }
-    setHistory([]);
-    setActiveBatchId(null);
-    setLastSeasonResult(null);
-  }, [initialBatchView, setActiveBatchId, setBaseSnapshotId, setLastSeasonResult, baseSnapshotId]);
+    const entry = toHistoryEntry(initialBatchView);
+    setSeasonHistory([entry]);
+    setActiveBatchId(initialBatchView.batchId);
+    setLastSeasonResult(entry);
+    hydratedBatchIdRef.current = initialBatchView.batchId;
+  }, [initialBatchView, current?.batchId, setActiveBatchId, setLastSeasonResult, setSeasonHistory]);
+
+  const syncBatchUrl = (batchId: string | null) => {
+    const nextUrl = batchId ? `/?batchId=${batchId}` : "/";
+    router.replace(nextUrl, { scroll: false });
+  };
 
   const mutation = useMutation({
     mutationFn: (throughMatchweek?: number) => {
@@ -164,14 +170,13 @@ export function SeasonSimulator({
       });
     },
     onSuccess: ({ result, batchId, persisted, baseSnapshotId: responseSnapshotId }) => {
-      const entry: HistoryEntry = { ...result };
+      const entry: SeasonHistoryEntry = { ...result };
       if (batchId) entry.batchId = batchId;
       if (persisted !== undefined) entry.persisted = persisted;
-      setHistory((items) => [...items, entry]);
-      setLastSeasonResult(result);
+      pushSeasonHistory(entry);
       if (batchId) {
-        setActiveBatchId(batchId);
-        router.replace(`/?batchId=${batchId}`, { scroll: false });
+        hydratedBatchIdRef.current = batchId;
+        syncBatchUrl(batchId);
       }
       if (responseSnapshotId) setBaseSnapshotId(responseSnapshotId);
       else if (baseSnapshotId) setBaseSnapshotId(baseSnapshotId);
@@ -179,7 +184,7 @@ export function SeasonSimulator({
       setSaveMessage(
         persisted && batchId
           ? `Saved simulation batch ${batchId.slice(0, 8)}… — open any team from the table and return to keep exploring this run.`
-          : "Simulation completed in memory. Start Postgres and run pnpm db:setup to persist.",
+          : "Simulation completed in memory only. Check that Postgres is running and seeded with pnpm db:setup.",
       );
     },
   });
@@ -215,29 +220,19 @@ export function SeasonSimulator({
   });
 
   const undo = () => {
-    setHistory((items) => {
-      const nextItems = items.slice(0, -1);
-      const nextCurrent = nextItems.at(-1);
-      setActiveBatchId(nextCurrent?.batchId ?? null);
-      setLastSeasonResult(nextCurrent ?? null);
-      if (nextCurrent?.batchId) {
-        router.replace(`/?batchId=${nextCurrent.batchId}`, { scroll: false });
-      } else {
-        router.replace("/", { scroll: false });
-      }
-      return nextItems;
-    });
+    popSeasonHistory();
+    const nextCurrent = useSimulationStore.getState().seasonHistory.at(-1);
+    hydratedBatchIdRef.current = nextCurrent?.batchId ?? null;
+    syncBatchUrl(nextCurrent?.batchId ?? null);
     setSaveMessage("");
   };
 
   const reset = () => {
-    setHistory([]);
     resetScenario();
-    setActiveBatchId(null);
-    setLastSeasonResult(null);
     if (baseSnapshotId) setBaseSnapshotId(baseSnapshotId);
+    hydratedBatchIdRef.current = null;
     setSaveMessage("");
-    router.replace("/", { scroll: false });
+    syncBatchUrl(null);
   };
 
   const isSimulationView = Boolean(current);

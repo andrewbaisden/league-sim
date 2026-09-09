@@ -32,26 +32,30 @@ export function getDemoSeason() {
 }
 
 export async function getActiveSeason() {
-  if (await databaseAvailable()) {
-    const persisted = await loadPersistedDemoSeason();
-    if (persisted) {
-      return {
-        id: persisted.logicalSeasonId,
-        seasonRecordId: persisted.id,
-        baseSnapshotId: persisted.baseSnapshotId,
-        competition: persisted.competition,
-        label: persisted.label,
-        currentMatchweek: persisted.currentMatchweek,
-        dataMode: persisted.dataMode,
-        lastUpdatedAt: persisted.lastUpdatedAt,
-        teams: persisted.teams,
-        fixtures: persisted.fixtures,
-        standings: persisted.standings,
-        ratings: persisted.ratings,
-        rules: persisted.rules,
-        persisted: true as const,
-      };
+  try {
+    if (await databaseAvailable()) {
+      const persisted = await loadPersistedDemoSeason();
+      if (persisted) {
+        return {
+          id: persisted.logicalSeasonId,
+          seasonRecordId: persisted.id,
+          baseSnapshotId: persisted.baseSnapshotId,
+          competition: persisted.competition,
+          label: persisted.label,
+          currentMatchweek: persisted.currentMatchweek,
+          dataMode: persisted.dataMode,
+          lastUpdatedAt: persisted.lastUpdatedAt,
+          teams: persisted.teams,
+          fixtures: persisted.fixtures,
+          standings: persisted.standings,
+          ratings: persisted.ratings,
+          rules: persisted.rules,
+          persisted: true as const,
+        };
+      }
     }
+  } catch (error) {
+    console.error("Failed to load persisted demo season", error);
   }
   return { ...getDemoSeason(), seasonRecordId: undefined, persisted: false as const };
 }

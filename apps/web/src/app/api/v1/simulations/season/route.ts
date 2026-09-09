@@ -45,7 +45,8 @@ export async function POST(request: Request) {
 
   let batchId: string | undefined;
   let persisted = false;
-  if (parsed.data.persist && (await databaseAvailable()) && season.baseSnapshotId) {
+  let baseSnapshotId = season.baseSnapshotId;
+  if (parsed.data.persist && (await databaseAvailable())) {
     try {
       const session = await auth.api.getSession({ headers: request.headers });
       const seasonRecord =
@@ -53,8 +54,8 @@ export async function POST(request: Request) {
           ? { id: season.seasonRecordId }
           : await resolveSeasonRecord(parsed.data.seasonId);
       const baseSnapshot =
-        (await findLatestBaseSnapshot(seasonRecord?.id)) ??
-        (season.baseSnapshotId ? { id: season.baseSnapshotId } : null);
+        (season.baseSnapshotId ? { id: season.baseSnapshotId } : null) ??
+        (await findLatestBaseSnapshot(seasonRecord?.id));
       if (baseSnapshot) {
         const batch = await persistSeasonSimulation({
           baseSnapshotId: baseSnapshot.id,
@@ -68,6 +69,9 @@ export async function POST(request: Request) {
         });
         batchId = batch.id;
         persisted = true;
+        baseSnapshotId = baseSnapshot.id;
+      } else {
+        console.error("Failed to persist season simulation: no base snapshot found");
       }
     } catch (error) {
       console.error("Failed to persist season simulation", error);
@@ -80,6 +84,6 @@ export async function POST(request: Request) {
     persisted,
     reality: "SIMULATION",
     baseState: season.dataMode,
-    baseSnapshotId: season.baseSnapshotId,
+    baseSnapshotId,
   });
 }

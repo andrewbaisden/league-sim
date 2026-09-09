@@ -39,32 +39,49 @@ function asNumber(value: { toNumber(): number } | number | string): number {
 }
 
 export async function loadPersistedDemoSeason(): Promise<PersistedSeasonView | null> {
-  const snapshot = await db.simulationBaseSnapshot.findUnique({
-    where: { fingerprint: DEMO_SNAPSHOT_FINGERPRINT },
-    include: {
-      season: {
-        include: {
-          competition: true,
-          ruleSet: true,
-          teamSeasons: { include: { team: true } },
-          fixtures: {
-            include: {
-              result: true,
-              homeTeamSeason: { include: { team: true } },
-              awayTeamSeason: { include: { team: true } },
-              providerMaps: { where: { provider: DEMO_PROVIDER } },
-            },
-            orderBy: [{ matchweek: "asc" }, { kickoff: "asc" }],
+  const snapshotInclude = {
+    season: {
+      include: {
+        competition: true,
+        ruleSet: true,
+        teamSeasons: { include: { team: true } },
+        fixtures: {
+          include: {
+            result: true,
+            homeTeamSeason: { include: { team: true } },
+            awayTeamSeason: { include: { team: true } },
+            providerMaps: { where: { provider: DEMO_PROVIDER } },
           },
-        },
-      },
-      ratingSet: {
-        include: {
-          ratings: { include: { teamSeason: { include: { team: true } } } },
+          orderBy: [{ matchweek: "asc" as const }, { kickoff: "asc" as const }],
         },
       },
     },
+    ratingSet: {
+      include: {
+        ratings: { include: { teamSeason: { include: { team: true } } } },
+      },
+    },
+  };
+
+  let snapshot = await db.simulationBaseSnapshot.findUnique({
+    where: { fingerprint: DEMO_SNAPSHOT_FINGERPRINT },
+    include: snapshotInclude,
   });
+
+  // Fall back to the latest demo-season snapshot if the fingerprint changed between seeds.
+  if (!snapshot?.season.ruleSet) {
+    snapshot = await db.simulationBaseSnapshot.findFirst({
+      where: {
+        season: {
+          label: DEMO_SEASON_LABEL,
+          competition: { slug: DEMO_COMPETITION_SLUG },
+        },
+      },
+      orderBy: [{ cutoffAt: "desc" }, { createdAt: "desc" }],
+      include: snapshotInclude,
+    });
+  }
+
   if (!snapshot?.season.ruleSet) return null;
 
   const teams: Team[] = snapshot.season.teamSeasons
