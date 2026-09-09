@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { authClient } from "@/lib/auth-client";
 
@@ -28,7 +28,23 @@ export default function AccountPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [scenarios, setScenarios] = useState<SavedScenario[]>([]);
   const [scenariosError, setScenariosError] = useState("");
+  const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const { register, handleSubmit, formState, reset } = useForm<AccountForm>();
+
+  const loadScenarios = useCallback(async () => {
+    const response = await fetch("/api/v1/scenarios");
+    if (!response.ok) {
+      setScenariosError(
+        response.status === 401
+          ? "Session expired. Sign in again."
+          : "Could not load saved scenarios. Is Postgres migrated and seeded?",
+      );
+      return;
+    }
+    const payload = (await response.json()) as { scenarios: SavedScenario[] };
+    setScenarios(payload.scenarios);
+    setScenariosError("");
+  }, []);
 
   useEffect(() => {
     if (!session) {
@@ -89,6 +105,30 @@ export default function AccountPage() {
     );
   });
 
+  const deleteScenario = async (scenario: SavedScenario) => {
+    const confirmed = window.confirm(`Delete sample "${scenario.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingScenarioId(scenario.id);
+    setMessage("");
+    setScenariosError("");
+
+    try {
+      const response = await fetch(`/api/v1/scenarios?id=${scenario.id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Could not delete sample.");
+      }
+      setScenarios((items) => items.filter((item) => item.id !== scenario.id));
+      setMessage(`Deleted sample "${scenario.name}".`);
+    } catch (error) {
+      setScenariosError(error instanceof Error ? error.message : "Could not delete sample.");
+      await loadScenarios();
+    } finally {
+      setDeletingScenarioId(null);
+    }
+  };
+
   if (sessionPending) return <main className="shell empty">Loading account…</main>;
   if (session) {
     return (
@@ -133,7 +173,7 @@ export default function AccountPage() {
           <div className="card-head">
             <div>
               <h2 style={{ margin: 0 }}>Saved scenarios</h2>
-              <p>Reopen a persisted season batch on any team page</p>
+              <p>Reopen or remove persisted season samples</p>
             </div>
           </div>
           <div className="sim-body" style={{ color: "var(--ink)" }}>
@@ -147,6 +187,7 @@ export default function AccountPage() {
               <div className="scenario-list">
                 {scenarios.map((scenario) => {
                   const seasonBatch = scenario.batches.find((batch) => batch.kind === "SEASON");
+                  const isDeleting = deletingScenarioId === scenario.id;
                   return (
                     <article key={scenario.id} className="scenario-row">
                       <div>
@@ -157,16 +198,26 @@ export default function AccountPage() {
                           {scenario.batches.length === 1 ? "" : "es"}
                         </p>
                       </div>
-                      {seasonBatch ? (
-                        <Link
-                          className="button button-secondary light"
-                          href={`/teams/arsenal?batchId=${seasonBatch.id}`}
+                      <div className="button-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                        {seasonBatch ? (
+                          <Link
+                            className="button button-secondary light"
+                            href={`/teams/arsenal?batchId=${seasonBatch.id}`}
+                          >
+                            Open sample team
+                          </Link>
+                        ) : (
+                          <span className="muted">No season batch</span>
+                        )}
+                        <button
+                          className="button button-secondary"
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={() => void deleteScenario(scenario)}
                         >
-                          Open sample team
-                        </Link>
-                      ) : (
-                        <span className="muted">No season batch</span>
-                      )}
+                          {isDeleting ? "Deleting…" : "Delete sample"}
+                        </button>
+                      </div>
                     </article>
                   );
                 })}
