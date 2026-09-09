@@ -1,0 +1,536 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompetitionFormat {
+  LEAGUE
+}
+
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETE
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  LIVE
+  HALF_TIME
+  FINISHED
+  POSTPONED
+  SUSPENDED
+  CANCELLED
+}
+
+enum SyncStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum SimulationKind {
+  MATCH
+  SEASON
+  MONTE_CARLO
+}
+
+enum SimulationStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum OverrideKind {
+  EXACT_SCORE
+  OUTCOME
+}
+
+enum ForcedOutcome {
+  HOME
+  DRAW
+  AWAY
+}
+
+model Country {
+  id           String        @id @default(uuid()) @db.Uuid
+  code         String        @unique @db.VarChar(3)
+  name         String
+  competitions Competition[]
+  teams        Team[]
+}
+
+model Competition {
+  id           String            @id @default(uuid()) @db.Uuid
+  countryId    String            @db.Uuid
+  slug         String            @unique
+  name         String
+  format       CompetitionFormat @default(LEAGUE)
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+  country      Country           @relation(fields: [countryId], references: [id])
+  seasons      Season[]
+  providerMaps ProviderCompetitionMap[]
+}
+
+model Season {
+  id                    String                   @id @default(uuid()) @db.Uuid
+  competitionId         String                   @db.Uuid
+  label                 String
+  startsAt              DateTime                 @db.Timestamptz(3)
+  endsAt                DateTime                 @db.Timestamptz(3)
+  status                SeasonStatus
+  currentMatchweek      Int?
+  createdAt             DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                 @updatedAt @db.Timestamptz(3)
+  competition           Competition              @relation(fields: [competitionId], references: [id])
+  ruleSet               CompetitionRuleSet?
+  teamSeasons           TeamSeason[]
+  fixtures              Fixture[]
+  standingSnapshots     StandingSnapshot[]
+  ratingSets            TeamRatingSet[]
+  baseSnapshots         SimulationBaseSnapshot[]
+  scenarios             SimulationScenario[]
+  providerMaps          ProviderSeasonMap[]
+
+  @@unique([competitionId, label])
+  @@index([competitionId, status])
+}
+
+model CompetitionRuleSet {
+  id               String                   @id @default(uuid()) @db.Uuid
+  seasonId         String                   @unique @db.Uuid
+  version          String
+  teamCount        Int
+  pointsForWin     Int                      @default(3)
+  pointsForDraw    Int                      @default(1)
+  pointsForLoss    Int                      @default(0)
+  fixturesPerPair  Int                      @default(2)
+  rankingCriteria  Json
+  zones            Json
+  createdAt        DateTime                 @default(now()) @db.Timestamptz(3)
+  season           Season                   @relation(fields: [seasonId], references: [id])
+  baseSnapshots    SimulationBaseSnapshot[]
+}
+
+model Team {
+  id           String            @id @default(uuid()) @db.Uuid
+  countryId    String?           @db.Uuid
+  slug         String            @unique
+  name         String
+  shortName    String
+  abbreviation String            @db.VarChar(5)
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+  country      Country?          @relation(fields: [countryId], references: [id])
+  seasons      TeamSeason[]
+  providerMaps ProviderTeamMap[]
+}
+
+model TeamSeason {
+  id                  String                        @id @default(uuid()) @db.Uuid
+  seasonId            String                        @db.Uuid
+  teamId              String                        @db.Uuid
+  seed                 Int?
+  season               Season                        @relation(fields: [seasonId], references: [id])
+  team                 Team                          @relation(fields: [teamId], references: [id])
+  homeFixtures         Fixture[]                     @relation("HomeTeamSeason")
+  awayFixtures         Fixture[]                     @relation("AwayTeamSeason")
+  standingRows         StandingSnapshotRow[]
+  ratings              TeamRatingSnapshot[]
+  scenarioAdjustments  ScenarioTeamAdjustment[]
+  projections          SimulationTeamProjection[]
+  positionProbabilities SimulationPositionProbability[]
+
+  @@unique([seasonId, teamId])
+  @@index([teamId, seasonId])
+}
+
+model Fixture {
+  id                  String               @id @default(uuid()) @db.Uuid
+  seasonId            String               @db.Uuid
+  homeTeamSeasonId    String               @db.Uuid
+  awayTeamSeasonId    String               @db.Uuid
+  kickoff             DateTime             @db.Timestamptz(3)
+  matchweek           Int?
+  venue               String?
+  status              FixtureStatus        @default(SCHEDULED)
+  providerUpdatedAt   DateTime?             @db.Timestamptz(3)
+  lastSyncedAt        DateTime?             @db.Timestamptz(3)
+  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(3)
+  season              Season               @relation(fields: [seasonId], references: [id])
+  homeTeamSeason      TeamSeason           @relation("HomeTeamSeason", fields: [homeTeamSeasonId], references: [id])
+  awayTeamSeason      TeamSeason           @relation("AwayTeamSeason", fields: [awayTeamSeasonId], references: [id])
+  result              MatchResult?
+  providerMaps        ProviderFixtureMap[]
+  scenarioOverrides   ScenarioFixtureOverride[]
+  simulatedFixtures   SimulatedFixture[]
+
+  @@index([seasonId, kickoff])
+  @@index([seasonId, matchweek])
+  @@index([seasonId, status])
+  @@index([homeTeamSeasonId])
+  @@index([awayTeamSeasonId])
+}
+
+model MatchResult {
+  id                  String   @id @default(uuid()) @db.Uuid
+  fixtureId           String   @unique @db.Uuid
+  homeGoals           Int
+  awayGoals           Int
+  halfTimeHomeGoals   Int?
+  halfTimeAwayGoals   Int?
+  confirmed           Boolean  @default(false)
+  providerUpdatedAt   DateTime? @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  fixture             Fixture  @relation(fields: [fixtureId], references: [id])
+}
+
+model StandingSnapshot {
+  id              String                @id @default(uuid()) @db.Uuid
+  seasonId        String                @db.Uuid
+  cutoffAt        DateTime              @db.Timestamptz(3)
+  matchweek       Int?
+  ruleVersion     String
+  dataFingerprint String
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  season          Season                @relation(fields: [seasonId], references: [id])
+  rows            StandingSnapshotRow[]
+
+  @@unique([seasonId, dataFingerprint])
+  @@index([seasonId, cutoffAt])
+}
+
+model StandingSnapshotRow {
+  id                 String           @id @default(uuid()) @db.Uuid
+  snapshotId         String           @db.Uuid
+  teamSeasonId       String           @db.Uuid
+  position           Int
+  played             Int
+  wins               Int
+  draws              Int
+  losses             Int
+  goalsFor           Int
+  goalsAgainst       Int
+  goalDifference     Int
+  points             Int
+  form               Json
+  tieUnresolved      Boolean          @default(false)
+  snapshot           StandingSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  teamSeason         TeamSeason       @relation(fields: [teamSeasonId], references: [id])
+
+  @@unique([snapshotId, teamSeasonId])
+}
+
+model TeamRatingSet {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  seasonId              String                 @db.Uuid
+  cutoffAt              DateTime               @db.Timestamptz(3)
+  modelVersion          String
+  leagueHomeGoals       Decimal                @db.Decimal(8, 6)
+  leagueAwayGoals       Decimal                @db.Decimal(8, 6)
+  priorEquivalentMatches Int
+  recentWeight          Decimal                @db.Decimal(5, 4)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(3)
+  season                Season                 @relation(fields: [seasonId], references: [id])
+  ratings               TeamRatingSnapshot[]
+  baseSnapshots         SimulationBaseSnapshot[]
+
+  @@index([seasonId, cutoffAt])
+}
+
+model TeamRatingSnapshot {
+  id             String        @id @default(uuid()) @db.Uuid
+  ratingSetId    String        @db.Uuid
+  teamSeasonId   String        @db.Uuid
+  homeAttack     Decimal       @db.Decimal(8, 6)
+  awayAttack     Decimal       @db.Decimal(8, 6)
+  homeDefence    Decimal       @db.Decimal(8, 6)
+  awayDefence    Decimal       @db.Decimal(8, 6)
+  recentAttack   Decimal       @db.Decimal(8, 6)
+  recentDefence  Decimal       @db.Decimal(8, 6)
+  sample         Json
+  ratingSet      TeamRatingSet @relation(fields: [ratingSetId], references: [id], onDelete: Cascade)
+  teamSeason     TeamSeason    @relation(fields: [teamSeasonId], references: [id])
+
+  @@unique([ratingSetId, teamSeasonId])
+}
+
+model ProviderCompetitionMap {
+  id            String      @id @default(uuid()) @db.Uuid
+  provider      String
+  externalId    String
+  competitionId String      @db.Uuid
+  competition   Competition @relation(fields: [competitionId], references: [id])
+
+  @@unique([provider, externalId])
+  @@unique([provider, competitionId])
+}
+
+model ProviderSeasonMap {
+  id         String @id @default(uuid()) @db.Uuid
+  provider   String
+  externalId String
+  seasonId   String @db.Uuid
+  season     Season @relation(fields: [seasonId], references: [id])
+
+  @@unique([provider, externalId])
+  @@unique([provider, seasonId])
+}
+
+model ProviderTeamMap {
+  id         String @id @default(uuid()) @db.Uuid
+  provider   String
+  externalId String
+  teamId     String @db.Uuid
+  team       Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([provider, externalId])
+  @@unique([provider, teamId])
+}
+
+model ProviderFixtureMap {
+  id         String  @id @default(uuid()) @db.Uuid
+  provider   String
+  externalId String
+  fixtureId  String  @db.Uuid
+  fixture    Fixture @relation(fields: [fixtureId], references: [id])
+
+  @@unique([provider, externalId])
+  @@unique([provider, fixtureId])
+}
+
+model SyncRun {
+  id             String     @id @default(uuid()) @db.Uuid
+  provider       String
+  jobType        String
+  scope          String
+  status         SyncStatus @default(PENDING)
+  processedCount Int        @default(0)
+  changedCount   Int        @default(0)
+  errorCode      String?
+  errorSummary   String?
+  startedAt      DateTime?  @db.Timestamptz(3)
+  completedAt    DateTime?  @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([provider, jobType, createdAt])
+}
+
+model SyncCursor {
+  id           String   @id @default(uuid()) @db.Uuid
+  provider     String
+  resourceType String
+  scope        String
+  cursor       String?
+  lastSuccessAt DateTime? @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([provider, resourceType, scope])
+}
+
+model SimulationBaseSnapshot {
+  id          String                   @id @default(uuid()) @db.Uuid
+  seasonId    String                   @db.Uuid
+  ruleSetId   String                   @db.Uuid
+  ratingSetId String                   @db.Uuid
+  cutoffAt    DateTime                 @db.Timestamptz(3)
+  modelVersion String
+  fingerprint String                   @unique
+  manifest    Json
+  createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
+  season      Season                   @relation(fields: [seasonId], references: [id])
+  ruleSet     CompetitionRuleSet       @relation(fields: [ruleSetId], references: [id])
+  ratingSet   TeamRatingSet            @relation(fields: [ratingSetId], references: [id])
+  scenarios   SimulationScenario[]
+  batches     SimulationBatch[]
+
+  @@index([seasonId, cutoffAt])
+}
+
+model SimulationScenario {
+  id             String                    @id @default(uuid()) @db.Uuid
+  ownerId        String                    @db.Uuid
+  seasonId       String                    @db.Uuid
+  baseSnapshotId String                    @db.Uuid
+  name           String
+  createdAt      DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime                  @updatedAt @db.Timestamptz(3)
+  owner          User                      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  season         Season                    @relation(fields: [seasonId], references: [id])
+  baseSnapshot   SimulationBaseSnapshot    @relation(fields: [baseSnapshotId], references: [id])
+  overrides      ScenarioFixtureOverride[]
+  adjustments    ScenarioTeamAdjustment[]
+  batches        SimulationBatch[]
+
+  @@index([ownerId, updatedAt])
+}
+
+model ScenarioFixtureOverride {
+  id          String             @id @default(uuid()) @db.Uuid
+  scenarioId  String             @db.Uuid
+  fixtureId   String             @db.Uuid
+  kind        OverrideKind
+  outcome     ForcedOutcome?
+  homeGoals   Int?
+  awayGoals   Int?
+  scenario    SimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  fixture     Fixture            @relation(fields: [fixtureId], references: [id])
+
+  @@unique([scenarioId, fixtureId])
+}
+
+model ScenarioTeamAdjustment {
+  id                String             @id @default(uuid()) @db.Uuid
+  scenarioId        String             @db.Uuid
+  teamSeasonId      String             @db.Uuid
+  attackMultiplier  Decimal            @default(1) @db.Decimal(5, 4)
+  defenceMultiplier Decimal            @default(1) @db.Decimal(5, 4)
+  scenario          SimulationScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  teamSeason        TeamSeason         @relation(fields: [teamSeasonId], references: [id])
+
+  @@unique([scenarioId, teamSeasonId])
+}
+
+model SimulationBatch {
+  id               String                     @id @default(uuid()) @db.Uuid
+  ownerId          String?                    @db.Uuid
+  scenarioId       String?                    @db.Uuid
+  baseSnapshotId   String                     @db.Uuid
+  kind             SimulationKind
+  status           SimulationStatus           @default(QUEUED)
+  seed             BigInt
+  modelVersion     String
+  runCount         Int
+  progress         Int                        @default(0)
+  inputHash        String
+  inputManifest    Json
+  durationMs       Int?
+  fixturesSimulated Int?
+  jobId            String?
+  errorCode        String?
+  createdAt        DateTime                   @default(now()) @db.Timestamptz(3)
+  startedAt        DateTime?                  @db.Timestamptz(3)
+  completedAt      DateTime?                  @db.Timestamptz(3)
+  owner            User?                      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  scenario         SimulationScenario?        @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+  baseSnapshot     SimulationBaseSnapshot     @relation(fields: [baseSnapshotId], references: [id])
+  fixtures         SimulatedFixture[]
+  projections      SimulationTeamProjection[]
+  positionProbabilities SimulationPositionProbability[]
+
+  @@index([ownerId, createdAt])
+  @@index([status, createdAt])
+  @@index([inputHash])
+}
+
+model SimulatedFixture {
+  id          String          @id @default(uuid()) @db.Uuid
+  batchId     String          @db.Uuid
+  fixtureId   String          @db.Uuid
+  homeGoals   Int
+  awayGoals   Int
+  source      String
+  batch       SimulationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  fixture     Fixture         @relation(fields: [fixtureId], references: [id])
+
+  @@unique([batchId, fixtureId])
+}
+
+model SimulationTeamProjection {
+  id                    String          @id @default(uuid()) @db.Uuid
+  batchId               String          @db.Uuid
+  teamSeasonId          String          @db.Uuid
+  expectedPoints        Decimal         @db.Decimal(8, 4)
+  expectedPosition      Decimal         @db.Decimal(8, 4)
+  titleProbability      Decimal         @db.Decimal(8, 6)
+  topFourProbability    Decimal         @db.Decimal(8, 6)
+  topSixProbability     Decimal         @db.Decimal(8, 6)
+  relegationProbability Decimal         @db.Decimal(8, 6)
+  batch                 SimulationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teamSeason            TeamSeason      @relation(fields: [teamSeasonId], references: [id])
+
+  @@unique([batchId, teamSeasonId])
+}
+
+model SimulationPositionProbability {
+  id           String          @id @default(uuid()) @db.Uuid
+  batchId      String          @db.Uuid
+  teamSeasonId String          @db.Uuid
+  position     Int
+  count        Decimal         @db.Decimal(12, 4)
+  probability Decimal         @db.Decimal(8, 6)
+  batch        SimulationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teamSeason   TeamSeason      @relation(fields: [teamSeasonId], references: [id])
+
+  @@unique([batchId, teamSeasonId, position])
+}
+
+model User {
+  id            String               @id @default(uuid()) @db.Uuid
+  name          String
+  email         String               @unique
+  emailVerified Boolean              @default(false)
+  image         String?
+  createdAt     DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime             @updatedAt @db.Timestamptz(3)
+  sessions      Session[]
+  accounts      Account[]
+  scenarios     SimulationScenario[]
+  batches       SimulationBatch[]
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+}
