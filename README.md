@@ -4,6 +4,8 @@ LeagueSim is a football analytics and season-simulation platform. It separates c
 
 The repository currently ships with a deterministic, clearly labelled 20-team Premier League demo snapshot. A football-data.org v4 adapter and production PostgreSQL/Redis schema are included; external credentials are optional for local development.
 
+![LeagueSim application screenshot](docs/leaguesim.png)
+
 ## Features
 
 - Responsive Premier League table with form and season-aware team pages
