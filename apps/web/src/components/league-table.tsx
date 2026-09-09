@@ -12,10 +12,12 @@ export function LeagueTable({
   rows,
   teams,
   caption = "Current Premier League standings",
+  batchId,
 }: {
   rows: StandingRow[];
   teams: Team[];
   caption?: string;
+  batchId?: string;
 }) {
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const formSlotIds = ["oldest", "older", "middle", "newer", "latest"];
@@ -57,13 +59,16 @@ export function LeagueTable({
         <tbody>
           {displayedRows.map((row) => {
             const team = teamById.get(row.teamId);
+            const href = batchId
+              ? `/teams/${row.teamId}?batchId=${batchId}`
+              : `/teams/${row.teamId}`;
             return (
               <tr key={row.teamId} className={isPreseason ? undefined : rowZone(row.position)}>
                 <td className="position">
                   {isPreseason ? "—" : row.tieUnresolved ? `=${row.position}` : row.position}
                 </td>
                 <td className="team-cell">
-                  <Link className="team-link" href={`/teams/${row.teamId}`}>
+                  <Link className="team-link" href={href}>
                     <span className="team-token" aria-hidden="true">
                       {team?.abbreviation ?? "—"}
                     </span>

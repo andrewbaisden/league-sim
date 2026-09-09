@@ -27,13 +27,20 @@ Next.js 16, React 19, TypeScript, Tailwind CSS, TanStack Query, Zustand, Zod, Po
 ```bash
 corepack enable
 pnpm install
-cp .env.example .env.local
+cp .env.example .env
+cp .env.example apps/web/.env.local
 docker compose up -d
-pnpm db:generate
+pnpm db:setup
 pnpm dev
 ```
 
-Open `http://localhost:3000`. Demo mode needs neither Docker nor an API key for normal browsing and simulation.
+Open `http://localhost:3000`.
+
+- `DATABASE_URL` must be present in both `.env` (Prisma CLI) and `apps/web/.env.local` (Next.js).
+- Docker Postgres uses host port **5433** to avoid clashing with a local Postgres on 5432.
+- Browsing and simulation work without Docker using in-memory demo data.
+- With Postgres running and `pnpm db:setup`, season simulations and Monte Carlo batches are persisted. Sign in to save named scenarios and reopen them from Account. Team pages accept `?batchId=` to show projected points, form, and results.
+- The header shows **Signed in · your name** when authentication succeeds.
 
 To use provider ingestion, register one football-data.org application, set `FOOTBALL_DATA_API_TOKEN`, and set `FOOTBALL_DATA_MODE=provider`. The ingestion persistence commands remain intentionally separate from application startup so a missing provider cannot corrupt or block demo operation.
 

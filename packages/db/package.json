@@ -8,15 +8,22 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate": "prisma migrate dev",
+    "migrate": "node --env-file=../../.env ./node_modules/prisma/build/index.js migrate deploy",
+    "migrate:dev": "node --env-file=../../.env ./node_modules/prisma/build/index.js migrate dev",
+    "seed": "node --env-file=../../.env --import tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit"
   },
+  "prisma": {
+    "seed": "node --env-file=../../.env --import tsx prisma/seed.ts"
+  },
   "dependencies": {
+    "@leaguesim/domain": "workspace:*",
     "@prisma/client": "^6.16.1"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
     "prisma": "^6.16.1",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
 }

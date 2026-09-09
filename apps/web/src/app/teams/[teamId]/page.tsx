@@ -1,22 +1,52 @@
+import { loadSeasonBatchView } from "@leaguesim/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FixtureList } from "@/components/fixture-list";
-import { demoFixtures, demoRatings, demoStandings, demoTeams, findTeam } from "@/lib/demo-data";
+import {
+  demoFixtures,
+  demoRatings,
+  demoStandings,
+  demoTeams,
+  findTeam,
+  getActiveSeason,
+} from "@/lib/demo-data";
 
-export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
+export const dynamic = "force-dynamic";
+
+export default async function TeamPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ batchId?: string }>;
+}) {
   const { teamId } = await params;
+  const { batchId } = await searchParams;
   const team = findTeam(teamId);
   if (!team) notFound();
-  const standing = demoStandings.find((row) => row.teamId === teamId);
-  const rating = demoRatings.ratings.find((row) => row.teamId === teamId);
+
+  const batchView = batchId ? await loadSeasonBatchView(batchId).catch(() => null) : null;
+  const season = batchView ? null : await getActiveSeason();
+
+  const standing =
+    batchView?.standings.find((row) => row.teamId === teamId) ??
+    season?.standings.find((row) => row.teamId === teamId) ??
+    demoStandings.find((row) => row.teamId === teamId);
+  const rating =
+    season?.ratings.ratings.find((row) => row.teamId === teamId) ??
+    demoRatings.ratings.find((row) => row.teamId === teamId);
   if (!standing || !rating) notFound();
-  const fixtures = demoFixtures.filter(
+
+  const fixtures = (batchView?.fixtures ?? season?.fixtures ?? demoFixtures).filter(
     (fixture) => fixture.homeTeamId === teamId || fixture.awayTeamId === teamId,
   );
+  const teams = batchView?.teams ?? season?.teams ?? demoTeams;
   const formSlotIds = ["oldest", "older", "middle", "newer", "latest"];
+  const reality = batchView ? "SIMULATION" : "CURRENT";
+
   return (
     <main className="shell">
-      <Link href="/" className="back">
+      <Link href={batchId ? `/?batchId=${batchId}` : "/"} className="back">
         ← Back to league
       </Link>
       <section className="team-hero">
@@ -24,14 +54,14 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
           {team.abbreviation}
         </span>
         <div>
-          <span className="eyebrow">Premier League · Demo data</span>
+          <span className="eyebrow">Premier League · {batchView ? "Simulation" : "Demo data"}</span>
           <h1>{team.name}</h1>
         </div>
       </section>
       <section className="metric-grid" aria-label={`${team.name} summary`}>
         <div className="metric">
           <span className="metric-label">Position</span>
-          <strong>{standing.position}</strong>
+          <strong>{standing.played === 0 ? "—" : standing.position}</strong>
         </div>
         <div className="metric">
           <span className="metric-label">Points</span>
@@ -54,11 +84,15 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
           <div className="card-head">
             <div>
               <h2>Season fixtures</h2>
-              <p>Official state and future schedule remain separate</p>
+              <p>
+                {batchView
+                  ? "Simulated and confirmed results for this saved batch"
+                  : "Official state and future schedule remain separate"}
+              </p>
             </div>
-            <span className="eyebrow">Current</span>
+            <span className="eyebrow">{reality}</span>
           </div>
-          <FixtureList fixtures={fixtures} teams={demoTeams} />
+          <FixtureList fixtures={fixtures} teams={teams} limit={12} />
         </section>
         <aside className="stack">
           <section className="card">
@@ -94,17 +128,27 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
             <div className="card-head">
               <div>
                 <h2>Form</h2>
-                <p>Last five confirmed matches</p>
+                <p>
+                  {batchView
+                    ? "Last five results in this simulation"
+                    : "Last five confirmed matches"}
+                </p>
               </div>
             </div>
             <div className="empty">
-              <span className="form" style={{ justifyContent: "flex-start" }}>
-                {standing.form.map((result, index) => (
-                  <span className={`form-token ${result}`} key={formSlotIds[index]}>
-                    {result}
-                  </span>
-                ))}
-              </span>
+              {standing.form.length === 0 ? (
+                <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.8rem" }}>
+                  No completed matches yet in this view.
+                </p>
+              ) : (
+                <span className="form" style={{ justifyContent: "flex-start" }}>
+                  {standing.form.map((result, index) => (
+                    <span className={`form-token ${result}`} key={formSlotIds[index]}>
+                      {result}
+                    </span>
+                  ))}
+                </span>
+              )}
             </div>
           </section>
         </aside>

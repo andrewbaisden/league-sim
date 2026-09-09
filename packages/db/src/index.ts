@@ -1,9 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalDatabase = globalThis as unknown as { prisma?: PrismaClient };
-
-export const db = globalDatabase.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalDatabase.prisma = db;
-
-export * from "@prisma/client";
+export { Prisma, PrismaClient } from "@prisma/client";
+export { db } from "./client";
+export * from "./demo-catalog";
+export * from "./ids";
+export * from "./persistence";
+export * from "./season-query";

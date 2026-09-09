@@ -36,6 +36,8 @@ export const seasonSimulationRequestSchema = z.object({
   overrides: z.array(fixtureOverrideSchema).max(380).default([]),
   adjustments: z.array(teamAdjustmentSchema).max(20).default([]),
   throughMatchweek: z.number().int().min(1).max(60).optional(),
+  scenarioId: z.string().uuid().optional(),
+  persist: z.boolean().default(true),
 });
 
 export const simulationBatchRequestSchema = seasonSimulationRequestSchema.extend({
@@ -45,9 +47,10 @@ export const simulationBatchRequestSchema = seasonSimulationRequestSchema.extend
 export const scenarioInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   seasonId: z.string().min(1),
-  baseSnapshotId: z.string().min(1),
+  baseSnapshotId: z.string().uuid(),
   overrides: z.array(fixtureOverrideSchema).max(380).default([]),
   adjustments: z.array(teamAdjustmentSchema).max(20).default([]),
+  batchId: z.string().uuid().optional(),
 });
 
 export type MatchSimulationRequest = z.infer<typeof matchSimulationRequestSchema>;

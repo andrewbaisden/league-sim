@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -11,22 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <Providers>
-          <header className="shell nav">
-            <Link href="/" className="brand" aria-label="LeagueSim home">
-              <span className="brand-mark">LS</span>
-              LeagueSim
-            </Link>
-            <nav className="nav-links" aria-label="Main navigation">
-              <Link href="/#table">Table</Link>
-              <Link href="/#fixtures">Fixtures</Link>
-              <Link href="/#simulation">Simulator</Link>
-              <Link href="/account">Account</Link>
-            </nav>
-            <span className="status-pill">Demo data</span>
-          </header>
+          <SiteHeader />
           {children}
         </Providers>
       </body>

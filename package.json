@@ -17,6 +17,8 @@
     "test:e2e": "pnpm --filter @leaguesim/web test:e2e",
     "db:generate": "pnpm --filter @leaguesim/db generate",
     "db:migrate": "pnpm --filter @leaguesim/db migrate",
+    "db:seed": "pnpm --filter @leaguesim/db seed",
+    "db:setup": "pnpm db:generate && pnpm db:migrate && pnpm db:seed",
     "prepare": "husky"
   },
   "devDependencies": {

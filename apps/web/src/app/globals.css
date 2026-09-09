@@ -147,6 +147,21 @@ summary:focus-visible {
   padding: 7px 10px;
   border-radius: 999px;
 }
+.status-pill.signed-in {
+  border-color: var(--green);
+  color: var(--green-dark);
+  background: rgba(42, 170, 37, 0.14);
+}
+.nav-status {
+  display: flex;
+  align-items: center;
+  max-width: 220px;
+}
+.nav-status .status-pill {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .hero {
   display: grid;
   grid-template-columns: 1.35fr 0.65fr;
@@ -620,6 +635,35 @@ summary:focus-visible {
   gap: 8px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--line);
+}
+.season-save {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.scenario-list {
+  display: grid;
+  gap: 12px;
+}
+.scenario-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.scenario-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.scenario-row > div > p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
 }
 .button-secondary.light {
   background: rgba(61, 56, 87, 0.09);

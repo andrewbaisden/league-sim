@@ -4,10 +4,12 @@ import { ForecastCard } from "@/components/forecast-card";
 import { LeagueTable } from "@/components/league-table";
 import { SeasonSimulator } from "@/components/season-simulator";
 import { SimulationLab } from "@/components/simulation-lab";
-import { getDemoSeason } from "@/lib/demo-data";
+import { getActiveSeason } from "@/lib/demo-data";
 
-export default function HomePage() {
-  const season = getDemoSeason();
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const season = await getActiveSeason();
   const forecast = runMonteCarlo({
     teams: season.teams,
     fixtures: season.fixtures,
@@ -40,6 +42,7 @@ export default function HomePage() {
           <p>
             fixtures remain in this deterministic early-season demo snapshot. Ratings are fixed at
             the snapshot boundary.
+            {season.persisted ? " Database persistence is active." : ""}
           </p>
         </aside>
       </section>
@@ -61,7 +64,12 @@ export default function HomePage() {
             </div>
             <LeagueTable rows={season.standings} teams={season.teams} />
           </section>
-          <SeasonSimulator seasonId={season.id} teams={season.teams} fixtures={season.fixtures} />
+          <SeasonSimulator
+            seasonId={season.id}
+            teams={season.teams}
+            fixtures={season.fixtures}
+            {...(season.baseSnapshotId ? { baseSnapshotId: season.baseSnapshotId } : {})}
+          />
         </div>
         <aside className="stack">
           <SimulationLab seasonId={season.id} fixtures={season.fixtures} teams={season.teams} />
