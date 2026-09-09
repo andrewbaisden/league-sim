@@ -1,15 +1,21 @@
+import { loadSeasonBatchView } from "@leaguesim/db";
 import { runMonteCarlo } from "@leaguesim/domain";
 import { FixtureList } from "@/components/fixture-list";
 import { ForecastCard } from "@/components/forecast-card";
-import { LeagueTable } from "@/components/league-table";
 import { SeasonSimulator } from "@/components/season-simulator";
 import { SimulationLab } from "@/components/simulation-lab";
 import { getActiveSeason } from "@/lib/demo-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ batchId?: string }>;
+}) {
+  const { batchId } = await searchParams;
   const season = await getActiveSeason();
+  const activeBatchView = batchId ? await loadSeasonBatchView(batchId).catch(() => null) : null;
   const forecast = runMonteCarlo({
     teams: season.teams,
     fixtures: season.fixtures,
@@ -48,26 +54,12 @@ export default async function HomePage() {
       </section>
       <div className="dashboard-grid">
         <div className="stack">
-          <section className="card" id="table" aria-labelledby="table-title">
-            <div className="card-head">
-              <div>
-                <h2 id="table-title">Current table</h2>
-                <p>
-                  {season.currentMatchweek === 1
-                    ? "Before matchweek 1 · all teams start level"
-                    : `After matchweek ${season.currentMatchweek - 1} · synthetic demo results`}
-                </p>
-              </div>
-              <span className="eyebrow">
-                {season.currentMatchweek === 1 ? "Not started" : "Current"}
-              </span>
-            </div>
-            <LeagueTable rows={season.standings} teams={season.teams} />
-          </section>
           <SeasonSimulator
             seasonId={season.id}
             teams={season.teams}
             fixtures={season.fixtures}
+            standings={season.standings}
+            initialBatchView={activeBatchView}
             {...(season.baseSnapshotId ? { baseSnapshotId: season.baseSnapshotId } : {})}
           />
         </div>
