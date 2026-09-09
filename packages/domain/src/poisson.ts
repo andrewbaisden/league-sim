@@ -99,6 +99,6 @@ export function calculateMatchProbability(
     awayWin,
     scorelines,
     tailProbability: Math.max(0, 1 - represented),
-    modelVersion: "poisson-v1",
+    modelVersion: ratingSet.modelVersion,
   };
 }

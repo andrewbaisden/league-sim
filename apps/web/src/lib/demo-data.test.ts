@@ -31,6 +31,10 @@ describe("demo season initial snapshot", () => {
       "Sunderland",
       "Tottenham Hotspur",
     ]);
+    expect(season.ratings.modelVersion).toBe("poisson-stars-v1");
+    expect(season.teams.every((team) => team.stars !== undefined)).toBe(true);
+    expect(season.teams.find((team) => team.id === "arsenal")?.stars).toBe(5);
+    expect(season.teams.find((team) => team.id === "hull")?.stars).toBe(2.5);
     expect(
       season.standings.every(
         (row) =>

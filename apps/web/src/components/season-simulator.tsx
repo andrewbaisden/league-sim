@@ -32,7 +32,7 @@ interface InitialBatchView {
 function toHistoryEntry(batchView: InitialBatchView): SeasonHistoryEntry {
   return {
     seed: batchView.seed,
-    modelVersion: "poisson-v1",
+    modelVersion: "poisson-stars-v1",
     standings: batchView.standings,
     fixtures: batchView.fixtures
       .filter((fixture) => fixture.status === "FINISHED" && fixture.score)

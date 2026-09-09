@@ -2,6 +2,7 @@ import { loadSeasonBatchView } from "@leaguesim/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FixtureList } from "@/components/fixture-list";
+import { StarRating } from "@/components/star-rating";
 import {
   demoFixtures,
   demoRatings,
@@ -26,23 +27,24 @@ export default async function TeamPage({
   if (!team) notFound();
 
   const batchView = batchId ? await loadSeasonBatchView(batchId).catch(() => null) : null;
-  const season = batchView ? null : await getActiveSeason();
+  const season = await getActiveSeason();
 
   const standing =
     batchView?.standings.find((row) => row.teamId === teamId) ??
-    season?.standings.find((row) => row.teamId === teamId) ??
+    season.standings.find((row) => row.teamId === teamId) ??
     demoStandings.find((row) => row.teamId === teamId);
   const rating =
-    season?.ratings.ratings.find((row) => row.teamId === teamId) ??
+    season.ratings.ratings.find((row) => row.teamId === teamId) ??
     demoRatings.ratings.find((row) => row.teamId === teamId);
   if (!standing || !rating) notFound();
 
-  const fixtures = (batchView?.fixtures ?? season?.fixtures ?? demoFixtures).filter(
+  const fixtures = (batchView?.fixtures ?? season.fixtures ?? demoFixtures).filter(
     (fixture) => fixture.homeTeamId === teamId || fixture.awayTeamId === teamId,
   );
-  const teams = batchView?.teams ?? season?.teams ?? demoTeams;
+  const teams = batchView?.teams ?? season.teams ?? demoTeams;
   const formSlotIds = ["oldest", "older", "middle", "newer", "latest"];
   const reality = batchView ? "SIMULATION" : "CURRENT";
+  const stars = team.stars ?? rating.stars;
 
   return (
     <main className="shell">
@@ -56,6 +58,7 @@ export default async function TeamPage({
         <div>
           <span className="eyebrow">Premier League · {batchView ? "Simulation" : "Demo data"}</span>
           <h1>{team.name}</h1>
+          {stars !== undefined ? <StarRating stars={stars} label={`${team.name} rating`} /> : null}
         </div>
       </section>
       <section className="metric-grid" aria-label={`${team.name} summary`}>
@@ -92,16 +95,25 @@ export default async function TeamPage({
             </div>
             <span className="eyebrow">{reality}</span>
           </div>
-          <FixtureList fixtures={fixtures} teams={teams} limit={12} />
+          <FixtureList
+            fixtures={fixtures}
+            teams={teams}
+            limit={12}
+            {...(batchId ? { batchId } : {})}
+          />
         </section>
         <aside className="stack">
           <section className="card">
             <div className="card-head">
               <div>
                 <h2>Model strength</h2>
-                <p>Dimensionless league-relative factors</p>
+                <p>
+                  {season.ratings.modelVersion === "poisson-stars-v1"
+                    ? "Star-prior attack and defence factors"
+                    : "Dimensionless league-relative factors"}
+                </p>
               </div>
-              <span className="eyebrow">Poisson v1</span>
+              <span className="eyebrow">{season.ratings.modelVersion}</span>
             </div>
             <div className="forecast-list">
               {[

@@ -90,7 +90,7 @@ export function runMonteCarlo(
   return {
     seed: input.seed >>> 0,
     runs: input.runs,
-    modelVersion: "poisson-v1",
+    modelVersion: input.ratings.modelVersion,
     durationMs,
     fixturesSimulated: remainingFixtures * input.runs,
     projections,

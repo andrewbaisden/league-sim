@@ -202,6 +202,13 @@ async function main() {
           homeMatches: rating.homeMatches,
           awayMatches: rating.awayMatches,
           recentMatches: rating.recentMatches,
+          ...(rating.stars !== undefined ? { stars: rating.stars } : {}),
+          ...(rating.attackMultiplier !== undefined
+            ? { attackMultiplier: rating.attackMultiplier }
+            : {}),
+          ...(rating.defenceMultiplier !== undefined
+            ? { defenceMultiplier: rating.defenceMultiplier }
+            : {}),
         },
       },
       update: {
@@ -215,6 +222,13 @@ async function main() {
           homeMatches: rating.homeMatches,
           awayMatches: rating.awayMatches,
           recentMatches: rating.recentMatches,
+          ...(rating.stars !== undefined ? { stars: rating.stars } : {}),
+          ...(rating.attackMultiplier !== undefined
+            ? { attackMultiplier: rating.attackMultiplier }
+            : {}),
+          ...(rating.defenceMultiplier !== undefined
+            ? { defenceMultiplier: rating.defenceMultiplier }
+            : {}),
         },
       },
     });
@@ -262,7 +276,7 @@ async function main() {
       ruleSetId,
       ratingSetId,
       cutoffAt,
-      modelVersion: "poisson-v1",
+      modelVersion: demoRatings.modelVersion,
       fingerprint: DEMO_SNAPSHOT_FINGERPRINT,
       manifest: {
         logicalSeasonId: DEMO_SEASON_KEY,
@@ -277,7 +291,7 @@ async function main() {
       ruleSetId,
       ratingSetId,
       cutoffAt,
-      modelVersion: "poisson-v1",
+      modelVersion: demoRatings.modelVersion,
       manifest: {
         logicalSeasonId: DEMO_SEASON_KEY,
         competitionSlug: DEMO_COMPETITION_SLUG,

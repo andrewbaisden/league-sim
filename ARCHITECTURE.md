@@ -34,7 +34,7 @@ The workspace isolates pure domain logic, persistence, provider translation, val
 
 The standings function initializes all teams, consumes confirmed results, derives table columns, and applies season-configured ranking rules. Unresolved sporting ties receive shared ranks.
 
-`poisson-v1` calculates league-relative home/away attack and defence with five-match shrinkage. Fifteen percent recent form is blended in and capped to a ten-percent relative movement. These values produce independent home and away expected-goal rates.
+`poisson-v1` / `poisson-stars-v1` calculate league-relative home/away attack and defence with five-match shrinkage. Fifteen percent recent form is blended in and capped to a ten-percent relative movement. When clubs declare FC-style star priors, clamped attack/defence multipliers are applied and the snapshot is labelled `poisson-stars-v1`. These values produce independent home and away expected-goal rates.
 
 ## Monte Carlo
 

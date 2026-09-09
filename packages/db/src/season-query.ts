@@ -8,6 +8,7 @@ import {
   type Team,
 } from "@leaguesim/domain";
 import { db } from "./client";
+import { demoTeams } from "./demo-catalog";
 import {
   DEMO_COMPETITION_SLUG,
   DEMO_PROVIDER,
@@ -15,6 +16,10 @@ import {
   DEMO_SEASON_LABEL,
   DEMO_SNAPSHOT_FINGERPRINT,
 } from "./ids";
+
+const demoStarsBySlug = new Map(
+  demoTeams.map((team) => [team.id, team.stars] as const).filter((entry) => entry[1] !== undefined),
+);
 
 export interface PersistedSeasonView {
   id: string;
@@ -85,12 +90,16 @@ export async function loadPersistedDemoSeason(): Promise<PersistedSeasonView | n
   if (!snapshot?.season.ruleSet) return null;
 
   const teams: Team[] = snapshot.season.teamSeasons
-    .map((membership) => ({
-      id: membership.team.slug,
-      name: membership.team.name,
-      shortName: membership.team.shortName,
-      abbreviation: membership.team.abbreviation,
-    }))
+    .map((membership) => {
+      const stars = demoStarsBySlug.get(membership.team.slug);
+      return {
+        id: membership.team.slug,
+        name: membership.team.name,
+        shortName: membership.team.shortName,
+        abbreviation: membership.team.abbreviation,
+        ...(stars !== undefined ? { stars } : {}),
+      };
+    })
     .toSorted((a, b) => a.name.localeCompare(b.name));
 
   const fixtures: Fixture[] = snapshot.season.fixtures.map((fixture) => {
@@ -127,23 +136,43 @@ export async function loadPersistedDemoSeason(): Promise<PersistedSeasonView | n
   };
 
   const ratings: RatingSet = {
-    modelVersion: "poisson-v1",
+    modelVersion: (snapshot.ratingSet.modelVersion === "poisson-stars-v1"
+      ? "poisson-stars-v1"
+      : "poisson-v1") as RatingSet["modelVersion"],
     leagueHomeGoals: asNumber(snapshot.ratingSet.leagueHomeGoals),
     leagueAwayGoals: asNumber(snapshot.ratingSet.leagueAwayGoals),
     priorEquivalentMatches: snapshot.ratingSet.priorEquivalentMatches,
     recentWeight: asNumber(snapshot.ratingSet.recentWeight),
-    ratings: snapshot.ratingSet.ratings.map((rating) => ({
-      teamId: rating.teamSeason.team.slug,
-      homeAttack: asNumber(rating.homeAttack),
-      awayAttack: asNumber(rating.awayAttack),
-      homeDefence: asNumber(rating.homeDefence),
-      awayDefence: asNumber(rating.awayDefence),
-      recentAttack: asNumber(rating.recentAttack),
-      recentDefence: asNumber(rating.recentDefence),
-      homeMatches: Number((rating.sample as { homeMatches?: number }).homeMatches ?? 0),
-      awayMatches: Number((rating.sample as { awayMatches?: number }).awayMatches ?? 0),
-      recentMatches: Number((rating.sample as { recentMatches?: number }).recentMatches ?? 0),
-    })),
+    ratings: snapshot.ratingSet.ratings.map((rating) => {
+      const sample = rating.sample as {
+        homeMatches?: number;
+        awayMatches?: number;
+        recentMatches?: number;
+        stars?: number;
+        attackMultiplier?: number;
+        defenceMultiplier?: number;
+      };
+      const stars = sample.stars ?? demoStarsBySlug.get(rating.teamSeason.team.slug);
+      return {
+        teamId: rating.teamSeason.team.slug,
+        homeAttack: asNumber(rating.homeAttack),
+        awayAttack: asNumber(rating.awayAttack),
+        homeDefence: asNumber(rating.homeDefence),
+        awayDefence: asNumber(rating.awayDefence),
+        recentAttack: asNumber(rating.recentAttack),
+        recentDefence: asNumber(rating.recentDefence),
+        homeMatches: Number(sample.homeMatches ?? 0),
+        awayMatches: Number(sample.awayMatches ?? 0),
+        recentMatches: Number(sample.recentMatches ?? 0),
+        ...(stars !== undefined ? { stars } : {}),
+        ...(sample.attackMultiplier !== undefined
+          ? { attackMultiplier: sample.attackMultiplier }
+          : {}),
+        ...(sample.defenceMultiplier !== undefined
+          ? { defenceMultiplier: sample.defenceMultiplier }
+          : {}),
+      };
+    }),
   };
 
   const standings = calculateStandings({ teams, fixtures, rules });
@@ -210,12 +239,16 @@ export async function loadSeasonBatchView(batchId: string) {
   const season = batch.baseSnapshot.season;
   if (!season.ruleSet) return null;
 
-  const teams: Team[] = season.teamSeasons.map((membership) => ({
-    id: membership.team.slug,
-    name: membership.team.name,
-    shortName: membership.team.shortName,
-    abbreviation: membership.team.abbreviation,
-  }));
+  const teams: Team[] = season.teamSeasons.map((membership) => {
+    const stars = demoStarsBySlug.get(membership.team.slug);
+    return {
+      id: membership.team.slug,
+      name: membership.team.name,
+      shortName: membership.team.shortName,
+      abbreviation: membership.team.abbreviation,
+      ...(stars !== undefined ? { stars } : {}),
+    };
+  });
 
   const simulated = new Map(
     batch.fixtures.map((row) => [row.fixture.providerMaps[0]?.externalId ?? row.fixtureId, row]),

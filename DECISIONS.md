@@ -38,4 +38,10 @@ Accepted. Vercel hosts Next.js, Neon hosts PostgreSQL, Upstash hosts Redis, and 
 
 ## ADR-010 — Demo season starting state
 
-Accepted. The deterministic demo snapshot begins before matchweek 1 with every fixture scheduled and every team level on zero statistics. The initial table uses full club names in alphabetical order but remains visually unranked; sporting ranks and competition-zone styling appear only after simulated or confirmed results exist.
+Accepted. The deterministic demo snapshot begins before matchweek 1 with every fixture scheduled and every team level on zero statistics. The initial table uses full club names in alphabetical order but remains visually unranked; sporting ranks and competition-zone styling appear only after simulated or confirmed results exist. Club star priors still differentiate expected strength before any matches are played.
+
+## ADR-011 — Star strength priors (`poisson-stars-v1`)
+
+Accepted. Demo and seeded teams carry an FC-style half-star rating (0.5–5.0). When any team declares `stars`, `calculateRatings` applies clamped attack/defence multipliers around a 3.5★ baseline and labels the snapshot `poisson-stars-v1`. Teams without stars keep `poisson-v1` behaviour. Simulated results still do not recursively rewrite later ratings within a run.
+
+

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Fixture, SimulatedFixture, Team } from "@leaguesim/domain";
+import Link from "next/link";
 import { useSimulationStore } from "@/stores/simulation-store";
 
 const formatter = new Intl.DateTimeFormat("en-GB", {
@@ -37,37 +38,45 @@ export function FixtureList({
   fixtures,
   teams,
   limit,
+  batchId,
 }: {
   fixtures: Fixture[];
   teams: Team[];
   limit?: number;
+  batchId?: string;
 }) {
   const names = new Map(teams.map((team) => [team.id, team.name]));
   const displayedFixtures = limit === undefined ? fixtures : fixtures.slice(0, limit);
   return (
     <div className="fixtures">
-      {displayedFixtures.map((fixture) => (
-        <article className="fixture" key={fixture.id}>
-          <div className="fixture-time">
-            MW {fixture.matchweek} · {formatter.format(new Date(fixture.kickoff))}
-            {fixture.status === "FINISHED" ? " · FT" : ""}
-          </div>
-          <div className="fixture-team">
-            <span>{names.get(fixture.homeTeamId) ?? fixture.homeTeamId}</span>
-            <span>{fixture.score?.home ?? "—"}</span>
-          </div>
-          <div className="fixture-team">
-            <span>{names.get(fixture.awayTeamId) ?? fixture.awayTeamId}</span>
-            <span>{fixture.score?.away ?? "—"}</span>
-          </div>
-        </article>
-      ))}
+      {displayedFixtures.map((fixture) => {
+        const href = batchId
+          ? `/matches/${fixture.id}?batchId=${batchId}`
+          : `/matches/${fixture.id}`;
+        return (
+          <Link className="fixture fixture-link" href={href} key={fixture.id}>
+            <div className="fixture-time">
+              MW {fixture.matchweek} · {formatter.format(new Date(fixture.kickoff))}
+              {fixture.status === "FINISHED" ? " · FT" : ""}
+            </div>
+            <div className="fixture-team">
+              <span>{names.get(fixture.homeTeamId) ?? fixture.homeTeamId}</span>
+              <span>{fixture.score?.home ?? "—"}</span>
+            </div>
+            <div className="fixture-team">
+              <span>{names.get(fixture.awayTeamId) ?? fixture.awayTeamId}</span>
+              <span>{fixture.score?.away ?? "—"}</span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
 
 export function NextFixturesCard({ fixtures, teams }: { fixtures: Fixture[]; teams: Team[] }) {
   const lastSeasonResult = useSimulationStore((state) => state.lastSeasonResult);
+  const activeBatchId = useSimulationStore((state) => state.activeBatchId);
   const nextFixtures = nextMatchweekFixtures(fixtures, lastSeasonResult?.fixtures);
   const matchweek = nextFixtures[0]?.matchweek;
 
@@ -81,7 +90,11 @@ export function NextFixturesCard({ fixtures, teams }: { fixtures: Fixture[]; tea
         <span className="eyebrow">Schedule</span>
       </div>
       {nextFixtures.length > 0 ? (
-        <FixtureList fixtures={nextFixtures} teams={teams} />
+        <FixtureList
+          fixtures={nextFixtures}
+          teams={teams}
+          {...(activeBatchId ? { batchId: activeBatchId } : {})}
+        />
       ) : (
         <p className="workspace-empty">No fixtures remain to be played.</p>
       )}

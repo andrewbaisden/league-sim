@@ -16,6 +16,7 @@ export function SiteHeader() {
         <Link href="/#table">Table</Link>
         <Link href="/#fixtures">Fixtures</Link>
         <Link href="/#simulation">Simulator</Link>
+        <Link href="/matches/demo-1-1">Match centre</Link>
         <Link href="/account">{session ? "My account" : "Sign in"}</Link>
       </nav>
       <div className="nav-status">

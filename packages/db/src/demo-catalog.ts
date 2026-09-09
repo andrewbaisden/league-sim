@@ -10,33 +10,34 @@ import {
 import { DEMO_SEASON_KEY } from "./ids";
 
 const teamNames = [
-  ["arsenal", "Arsenal", "Arsenal", "ARS"],
-  ["aston-villa", "Aston Villa", "Villa", "AVL"],
-  ["bournemouth", "AFC Bournemouth", "Bournemouth", "BOU"],
-  ["brentford", "Brentford", "Brentford", "BRE"],
-  ["brighton", "Brighton & Hove Albion", "Brighton", "BHA"],
-  ["chelsea", "Chelsea", "Chelsea", "CHE"],
-  ["coventry", "Coventry City", "Coventry", "COV"],
-  ["crystal-palace", "Crystal Palace", "Palace", "CRY"],
-  ["everton", "Everton", "Everton", "EVE"],
-  ["fulham", "Fulham", "Fulham", "FUL"],
-  ["hull", "Hull City", "Hull", "HUL"],
-  ["ipswich", "Ipswich Town", "Ipswich", "IPS"],
-  ["leeds", "Leeds United", "Leeds", "LEE"],
-  ["liverpool", "Liverpool", "Liverpool", "LIV"],
-  ["man-city", "Manchester City", "Man City", "MCI"],
-  ["man-united", "Manchester United", "Man Utd", "MUN"],
-  ["newcastle", "Newcastle United", "Newcastle", "NEW"],
-  ["nottingham-forest", "Nottingham Forest", "Nott'm Forest", "NFO"],
-  ["sunderland", "Sunderland", "Sunderland", "SUN"],
-  ["tottenham", "Tottenham Hotspur", "Spurs", "TOT"],
+  ["arsenal", "Arsenal", "Arsenal", "ARS", 5],
+  ["aston-villa", "Aston Villa", "Villa", "AVL", 4],
+  ["bournemouth", "AFC Bournemouth", "Bournemouth", "BOU", 3.5],
+  ["brentford", "Brentford", "Brentford", "BRE", 3.5],
+  ["brighton", "Brighton & Hove Albion", "Brighton", "BHA", 3.5],
+  ["chelsea", "Chelsea", "Chelsea", "CHE", 4.5],
+  ["coventry", "Coventry City", "Coventry", "COV", 2.5],
+  ["crystal-palace", "Crystal Palace", "Palace", "CRY", 3.5],
+  ["everton", "Everton", "Everton", "EVE", 3.5],
+  ["fulham", "Fulham", "Fulham", "FUL", 3.5],
+  ["hull", "Hull City", "Hull", "HUL", 2.5],
+  ["ipswich", "Ipswich Town", "Ipswich", "IPS", 3],
+  ["leeds", "Leeds United", "Leeds", "LEE", 3.5],
+  ["liverpool", "Liverpool", "Liverpool", "LIV", 4.5],
+  ["man-city", "Manchester City", "Man City", "MCI", 5],
+  ["man-united", "Manchester United", "Man Utd", "MUN", 4],
+  ["newcastle", "Newcastle United", "Newcastle", "NEW", 4],
+  ["nottingham-forest", "Nottingham Forest", "Nott'm Forest", "NFO", 3.5],
+  ["sunderland", "Sunderland", "Sunderland", "SUN", 3],
+  ["tottenham", "Tottenham Hotspur", "Spurs", "TOT", 4],
 ] as const;
 
-export const demoTeams: Team[] = teamNames.map(([id, name, shortName, abbreviation]) => ({
+export const demoTeams: Team[] = teamNames.map(([id, name, shortName, abbreviation, stars]) => ({
   id,
   name,
   shortName,
   abbreviation,
+  stars,
 }));
 
 export const premierLeagueRules: CompetitionRules = {

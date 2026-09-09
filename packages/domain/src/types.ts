@@ -11,12 +11,18 @@ export const fixtureStatuses = [
 export type FixtureStatus = (typeof fixtureStatuses)[number];
 export type FormResult = "W" | "D" | "L";
 export type MatchOutcome = "HOME" | "DRAW" | "AWAY";
+export type ModelVersion = "poisson-v1" | "poisson-stars-v1";
+
+/** Club quality prior on a half-star FC-style scale from 0.5 to 5.0. */
+export type TeamStars = number;
 
 export interface Team {
   id: string;
   name: string;
   shortName: string;
   abbreviation: string;
+  /** Optional FC-style star rating used as a strength prior. */
+  stars?: TeamStars;
 }
 
 export interface MatchScore {
@@ -95,10 +101,14 @@ export interface TeamRating {
   homeMatches: number;
   awayMatches: number;
   recentMatches: number;
+  /** Present when a star prior contributed to this rating. */
+  stars?: TeamStars;
+  attackMultiplier?: number;
+  defenceMultiplier?: number;
 }
 
 export interface RatingSet {
-  modelVersion: "poisson-v1";
+  modelVersion: ModelVersion;
   leagueHomeGoals: number;
   leagueAwayGoals: number;
   priorEquivalentMatches: number;
@@ -121,7 +131,7 @@ export interface MatchProbability {
   awayWin: number;
   scorelines: ScoreProbability[];
   tailProbability: number;
-  modelVersion: "poisson-v1";
+  modelVersion: ModelVersion;
 }
 
 export interface TeamAdjustment {
@@ -155,7 +165,7 @@ export interface SeasonSimulationInput {
 
 export interface SeasonSimulationResult {
   seed: number;
-  modelVersion: "poisson-v1";
+  modelVersion: ModelVersion;
   fixtures: SimulatedFixture[];
   standings: StandingRow[];
 }
@@ -174,7 +184,7 @@ export interface TeamProjection {
 export interface MonteCarloResult {
   seed: number;
   runs: number;
-  modelVersion: "poisson-v1";
+  modelVersion: ModelVersion;
   durationMs: number;
   fixturesSimulated: number;
   projections: TeamProjection[];

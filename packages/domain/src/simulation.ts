@@ -109,7 +109,7 @@ export function simulateSeason(
 
   return {
     seed: input.seed >>> 0,
-    modelVersion: "poisson-v1",
+    modelVersion: input.ratings.modelVersion,
     fixtures: simulated,
     standings: calculateStandings({
       teams: input.teams,
