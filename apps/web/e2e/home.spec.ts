@@ -7,7 +7,14 @@ test("views the table and simulates a match", async ({ page }) => {
     page.getByRole("table", { name: /current premier league standings/i }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: /season workspace/i })).toBeVisible();
+  const nextFixtures = page.locator("#fixtures");
+  await expect(nextFixtures.getByText("Matchweek 1", { exact: true })).toBeVisible();
+  await expect(nextFixtures.locator("article.fixture")).toHaveCount(10);
+  await expect(nextFixtures.getByText("Tottenham Hotspur", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Simulate MW 1" })).toBeEnabled();
   await page.getByRole("button", { name: "Simulate match" }).click();
   await expect(page.getByText(/sampled result/i)).toBeVisible();
+  await page.getByRole("button", { name: "Simulate MW 1" }).click();
+  await expect(nextFixtures.getByText("Matchweek 2", { exact: true })).toBeVisible();
+  await expect(nextFixtures.locator("article.fixture")).toHaveCount(10);
 });

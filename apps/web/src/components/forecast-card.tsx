@@ -7,7 +7,7 @@ export function ForecastCard({
   projections: TeamProjection[];
   teams: Team[];
 }) {
-  const names = new Map(teams.map((team) => [team.id, team.shortName]));
+  const names = new Map(teams.map((team) => [team.id, team.name]));
   const leaders = projections
     .toSorted((a, b) => b.titleProbability - a.titleProbability)
     .slice(0, 5);

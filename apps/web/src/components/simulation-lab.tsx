@@ -9,7 +9,7 @@ import type {
   Team,
 } from "@leaguesim/domain";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useSimulationStore } from "@/stores/simulation-store";
 import { PositionHeatmap } from "./position-heatmap";
 
@@ -45,14 +45,32 @@ export function SimulationLab({
   const setOutcome = useSimulationStore((state) => state.setOutcome);
   const setAdjustment = useSimulationStore((state) => state.setAdjustment);
   const nextSeed = useSimulationStore((state) => state.nextSeed);
-  const upcoming = fixtures.filter((fixture) => fixture.status === "SCHEDULED");
-  const names = new Map(teams.map((team) => [team.id, team.shortName]));
+  const lastSeasonResult = useSimulationStore((state) => state.lastSeasonResult);
+  const upcoming = useMemo(() => {
+    const simulatedIds = new Set(
+      lastSeasonResult?.fixtures.map((fixture) => fixture.fixtureId) ?? [],
+    );
+    return fixtures
+      .filter(
+        (fixture) =>
+          (fixture.status === "SCHEDULED" || fixture.status === "POSTPONED") &&
+          !simulatedIds.has(fixture.id),
+      )
+      .toSorted(
+        (left, right) =>
+          new Date(left.kickoff).getTime() - new Date(right.kickoff).getTime() ||
+          left.id.localeCompare(right.id),
+      );
+  }, [fixtures, lastSeasonResult]);
+  const names = new Map(teams.map((team) => [team.id, team.name]));
   const selectedOverride = overrides.find(
     (override): override is Extract<FixtureOverride, { kind: "OUTCOME" }> =>
       override.fixtureId === selectedFixtureId && override.kind === "OUTCOME",
   );
   useEffect(() => {
-    if (!selectedFixtureId && upcoming[0]) setSelectedFixtureId(upcoming[0].id);
+    if (!upcoming.some((fixture) => fixture.id === selectedFixtureId)) {
+      setSelectedFixtureId(upcoming[0]?.id ?? "");
+    }
   }, [selectedFixtureId, setSelectedFixtureId, upcoming]);
 
   const match = useMutation({
@@ -80,7 +98,8 @@ export function SimulationLab({
   });
 
   const selected = upcoming.find((fixture) => fixture.id === selectedFixtureId);
-  const probability = match.data?.probability;
+  const matchData = match.data?.probability.fixtureId === selected?.id ? match.data : undefined;
+  const probability = matchData?.probability;
   return (
     <section className="card simulation" id="simulation" aria-labelledby="simulation-title">
       <div className="card-head simulation-head">
@@ -162,8 +181,12 @@ export function SimulationLab({
             id="fixture-select"
             className="select"
             value={selectedFixtureId}
-            onChange={(event) => setSelectedFixtureId(event.target.value)}
+            onChange={(event) => {
+              match.reset();
+              setSelectedFixtureId(event.target.value);
+            }}
           >
+            {upcoming.length === 0 ? <option value="">Season complete</option> : null}
             {upcoming.map((fixture) => (
               <option key={fixture.id} value={fixture.id}>
                 {names.get(fixture.homeTeamId)} vs {names.get(fixture.awayTeamId)}
@@ -171,10 +194,10 @@ export function SimulationLab({
             ))}
           </select>
         </div>
-        {match.data && selected ? (
+        {matchData && selected ? (
           <div className="score" aria-live="polite">
             <strong>
-              {match.data.sampled.homeGoals} – {match.data.sampled.awayGoals}
+              {matchData.sampled.homeGoals} – {matchData.sampled.awayGoals}
             </strong>
             <span className="score-caption">
               {names.get(selected.homeTeamId)} vs {names.get(selected.awayTeamId)} · sampled result

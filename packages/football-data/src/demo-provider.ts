@@ -14,7 +14,12 @@ const RETRIEVED_AT = "2026-09-07T18:00:00.000Z";
 const teams: TeamData[] = [
   { externalId: "demo-ars", name: "Arsenal", shortName: "Arsenal", abbreviation: "ARS" },
   { externalId: "demo-avl", name: "Aston Villa", shortName: "Aston Villa", abbreviation: "AVL" },
-  { externalId: "demo-bou", name: "Bournemouth", shortName: "Bournemouth", abbreviation: "BOU" },
+  {
+    externalId: "demo-bou",
+    name: "AFC Bournemouth",
+    shortName: "Bournemouth",
+    abbreviation: "BOU",
+  },
   { externalId: "demo-bre", name: "Brentford", shortName: "Brentford", abbreviation: "BRE" },
 ];
 

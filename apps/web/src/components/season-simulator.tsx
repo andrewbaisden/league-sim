@@ -103,7 +103,7 @@ export function SeasonSimulator({
   const current = history.at(-1);
   const effectiveBaseSnapshotId = storeBaseSnapshotId ?? baseSnapshotId ?? null;
   const projectedBatchId = current?.batchId ?? activeBatchId;
-  const teamNames = useMemo(() => new Map(teams.map((team) => [team.id, team.shortName])), [teams]);
+  const teamNames = useMemo(() => new Map(teams.map((team) => [team.id, team.name])), [teams]);
   const scheduledWeeks = useMemo(
     () =>
       [

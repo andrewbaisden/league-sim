@@ -7,7 +7,7 @@ export function PositionHeatmap({
   projections: TeamProjection[];
   teams: Team[];
 }) {
-  const names = new Map(teams.map((team) => [team.id, team.shortName]));
+  const names = new Map(teams.map((team) => [team.id, team.name]));
   const teamCount = teams.length;
   const positions = Array.from({ length: teamCount }, (_, index) => index + 1);
 
@@ -40,7 +40,7 @@ export function PositionHeatmap({
                     key={`${projection.teamId}-pos-${position}`}
                     style={{
                       background: `rgba(16, 92, 73, ${intensity * 0.72})`,
-                      color: intensity > 0.45 ? "#fffefa" : "var(--ink)",
+                      color: "#fffefa",
                     }}
                     title={`${names.get(projection.teamId)} finish ${position}: ${percent.toFixed(1)}%`}
                   >

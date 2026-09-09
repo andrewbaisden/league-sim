@@ -46,4 +46,51 @@ describe("demo season initial snapshot", () => {
       ),
     ).toBe(true);
   });
+
+  it("schedules complete matchweeks in typical UK broadcast slots", () => {
+    const season = getDemoSeason();
+    const londonTime = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: "Europe/London",
+    });
+    const labelsFor = (matchweek: number) =>
+      season.fixtures
+        .filter((fixture) => fixture.matchweek === matchweek)
+        .map((fixture) => londonTime.format(new Date(fixture.kickoff)));
+
+    expect(labelsFor(1)).toEqual([
+      "Fri 20:00",
+      "Sat 12:30",
+      "Sat 15:00",
+      "Sat 15:00",
+      "Sat 15:00",
+      "Sat 15:00",
+      "Sat 15:00",
+      "Sat 17:30",
+      "Sun 14:00",
+      "Sun 16:30",
+    ]);
+    expect(labelsFor(2)).toContain("Mon 20:00");
+    expect(labelsFor(20)).toEqual([
+      "Tue 19:45",
+      "Tue 19:45",
+      "Tue 19:45",
+      "Tue 19:45",
+      "Tue 19:45",
+      "Wed 20:00",
+      "Wed 20:00",
+      "Wed 20:00",
+      "Wed 20:00",
+      "Wed 20:00",
+    ]);
+    expect(labelsFor(21)).toContain("Mon 20:00");
+    expect(
+      Array.from({ length: 38 }, (_, index) => index + 1).every(
+        (matchweek) => labelsFor(matchweek).length === 10,
+      ),
+    ).toBe(true);
+  });
 });

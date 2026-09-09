@@ -1,6 +1,6 @@
 import { loadSeasonBatchView } from "@leaguesim/db";
 import { runMonteCarlo } from "@leaguesim/domain";
-import { FixtureList } from "@/components/fixture-list";
+import { NextFixturesCard } from "@/components/fixture-list";
 import { ForecastCard } from "@/components/forecast-card";
 import { SeasonSimulator } from "@/components/season-simulator";
 import { SimulationLab } from "@/components/simulation-lab";
@@ -24,7 +24,6 @@ export default async function HomePage({
     seed: 202627,
     runs: 250,
   });
-  const nextFixtures = season.fixtures.filter((fixture) => fixture.status === "SCHEDULED");
   return (
     <main className="shell">
       <section className="hero">
@@ -66,16 +65,7 @@ export default async function HomePage({
         <aside className="stack">
           <SimulationLab seasonId={season.id} fixtures={season.fixtures} teams={season.teams} />
           <ForecastCard projections={forecast.projections} teams={season.teams} />
-          <section className="card" id="fixtures" aria-labelledby="fixtures-title">
-            <div className="card-head">
-              <div>
-                <h2 id="fixtures-title">Next fixtures</h2>
-                <p>Matchweek {season.currentMatchweek}</p>
-              </div>
-              <span className="eyebrow">Schedule</span>
-            </div>
-            <FixtureList fixtures={nextFixtures} teams={season.teams} />
-          </section>
+          <NextFixturesCard fixtures={season.fixtures} teams={season.teams} />
         </aside>
       </div>
       <footer className="disclaimer">

@@ -20,4 +20,4 @@ export const DEMO_PROVIDER = "demo";
 export const DEMO_SEASON_KEY = "premier-league-2026-27-demo";
 export const DEMO_COMPETITION_SLUG = "premier-league";
 export const DEMO_SEASON_LABEL = "2026/27";
-export const DEMO_SNAPSHOT_FINGERPRINT = "demo-pl-2026-27-preseason-v1";
+export const DEMO_SNAPSHOT_FINGERPRINT = "demo-pl-2026-27-preseason-v2";

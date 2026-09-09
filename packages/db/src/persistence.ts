@@ -24,7 +24,7 @@ export async function findLatestBaseSnapshot(seasonId?: string) {
     where: seasonId
       ? { OR: [{ seasonId }, { fingerprint: DEMO_SNAPSHOT_FINGERPRINT }] }
       : { fingerprint: DEMO_SNAPSHOT_FINGERPRINT },
-    orderBy: { cutoffAt: "desc" },
+    orderBy: [{ cutoffAt: "desc" }, { createdAt: "desc" }],
   });
 }
 
